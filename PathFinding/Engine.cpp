@@ -37,6 +37,14 @@ bool Engine::OnUserUpdate(float fElapsedTime)
 
 	if (GetMouse(0).bReleased)
 	{
+		for (int x = 0; x < mWidth; x++)
+		{
+			for (int y = 0; y < mHeight; y++)
+			{
+				map[y * mWidth + x].isPath = false;
+			}
+		}
+
 		if (SelectedTileX >= 0 && SelectedTileX < mWidth)
 		{
 			if (SelectedTileY >= 0 && SelectedTileY < mHeight)
@@ -155,7 +163,7 @@ bool Engine::aStar()
 
 	auto distance = [](Tile* a, Tile* b)
 	{
-		return sqrtf(a->x - b->x) * (a->x - b->x) + (a->y - b->y) * (a->y - b->y);
+		return sqrtf((a->x - b->x) * (a->x - b->x) + (a->y - b->y) * (a->y - b->y));
 	};
 
 	auto heuristic = [distance](Tile* a, Tile* b)
