@@ -2,8 +2,8 @@
 #include "Engine.h"
 #include <iostream>
 
-const int width = 901;
-const int height = 901;
+const int width = 785;
+const int height = 785;
 
 int main()
 {

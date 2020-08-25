@@ -1,16 +1,14 @@
 #pragma once
 #include <olcPixelGameEngine.h>
 
-const int mWidth = 32;
-const int mHeight = 32;
+const int mWidth = 30;
+const int mHeight = 30;
 
 struct Tile
 {
 	int x;
 	int y;
 	bool isSolid;
-	bool isStart;
-	bool isEnd;
 	bool isPath;
 	bool Visited;
 	Tile* parent = nullptr;
@@ -39,6 +37,10 @@ public:
 	Tile* start = nullptr;
 	Tile* end = nullptr;
 
-	int TileSize = 30;
+	std::list<Tile*> uTiles;
+
+	Tile* currTile = nullptr;
+
+	int TileSize = 28;
 };
 

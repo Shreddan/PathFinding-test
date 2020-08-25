@@ -21,14 +21,11 @@ bool Engine::OnUserCreate()
 			map[y * mWidth + x].isSolid = false;
 			map[y * mWidth + x].Visited = false;
 			map[y * mWidth + x].parent = nullptr;
-			map[y * mWidth + x].isStart = false;
-			map[y * mWidth + x].isEnd = false;
 			map[y * mWidth + x].isPath = false;
 		}
 	}
 	addNeighbours();
 	start = &map[(mHeight / 2) * mWidth + 1];
-	end = &map[(mHeight / 2) * mWidth + mWidth - 2];
 	return true;
 }
 
@@ -47,12 +44,10 @@ bool Engine::OnUserUpdate(float fElapsedTime)
 				if (GetKey(olc::SHIFT).bHeld)
 				{
 					start = &map[SelectedTileY * mWidth + SelectedTileX];
-					map[SelectedTileY * mWidth + SelectedTileX].isStart = true;
 				}
 				else if (GetKey(olc::CTRL).bHeld)
 				{
 					end = &map[SelectedTileY * mWidth + SelectedTileX];
-					map[SelectedTileY * mWidth + SelectedTileX].isEnd = true;
 				}
 				else
 				{
@@ -67,7 +62,7 @@ bool Engine::OnUserUpdate(float fElapsedTime)
 	if (end != nullptr)
 	{
 		Tile* t = end;
-		while (t->parent != nullptr)
+		while (t->parent != nullptr && t != start)
 		{
 			t->isPath = true;
 			t = t->parent;
@@ -79,38 +74,39 @@ bool Engine::OnUserUpdate(float fElapsedTime)
 
 void Engine::DrawTileMap()
 {
-	for (int i = 0; i < mWidth * mHeight; i++)
+	for (int i = 0; i < (mWidth - 1) * (mHeight - 1); i++)
 	{
 		if (map[i].isSolid == 0)
 		{
-			if (map[i].isStart == 0 && map[i].isEnd == 0)
+			if (&map[i] != start && &map[i] != end)
 			{
-				if (map[i].isPath)
+				if (!map[i].isPath)
 				{
-					FillRect(olc::vf2d(map[i].x * 30, map[i].y * 30), olc::vf2d(30, 30), olc::YELLOW);
+					FillRect(olc::vf2d(map[i].x * 28, map[i].y * 28), olc::vf2d(28, 28), olc::BLUE);
 				}
-				else
+				else if (map[i].isPath)
 				{
-					FillRect(olc::vf2d(map[i].x * 30, map[i].y * 30), olc::vf2d(30, 30), olc::BLUE);
+					FillRect(olc::vf2d(map[i].x * 28, map[i].y * 28), olc::vf2d(28, 28), olc::YELLOW);
 				}
 			}
-			else if (map[i].isStart)
+			else if (&map[i] == start)
 			{
 				//std::cout << "Start : " << map[i].x << " " << map[i].y << std::endl;
-				FillRect(olc::vf2d(map[i].x * 30, map[i].y * 30), olc::vf2d(30, 30), olc::GREEN);
+				FillRect(olc::vf2d(map[i].x * 28, map[i].y * 28), olc::vf2d(28, 28), olc::GREEN);
 			}
-			else if (map[i].isEnd)
+			else if (&map[i] == end)
 			{
 				//std::cout << "End : " << map[i].x << " " << map[i].y << std::endl;
-				FillRect(olc::vf2d(map[i].x * 30, map[i].y * 30), olc::vf2d(30, 30), olc::RED);
+				FillRect(olc::vf2d(map[i].x * 28, map[i].y * 28), olc::vf2d(28, 28), olc::RED);
 			}
 			
 		}
 		else
 		{
-			FillRect(olc::vf2d(map[i].x * 30, map[i].y * 30), olc::vf2d(30, 30), olc::VERY_DARK_BLUE);
+			FillRect(olc::vf2d(map[i].x * 28, map[i].y * 28), olc::vf2d(28, 28), olc::VERY_DARK_BLUE);
 		}
-		DrawRect(olc::vf2d(map[i].x * 30, map[i].y * 30), olc::vf2d(30, 30), olc::WHITE);
+
+		DrawRect(olc::vf2d(map[i].x * 28, map[i].y * 28), olc::vf2d(28, 28), olc::WHITE);
 		
 	}
 }
@@ -154,6 +150,7 @@ bool Engine::aStar()
 			map[y * mWidth + x].parent = nullptr;
 		}
 	}
+	
 	std::cout << "Reset variables" << std::endl;
 
 	auto distance = [](Tile* a, Tile* b)
@@ -166,18 +163,17 @@ bool Engine::aStar()
 		return distance(a, b);
 	};
 
-	Tile* currTile = start;
-	start->Local = 0.0f;
-	start->Global = heuristic(start, end);
+	currTile = start;
+	currTile->Local = 0.0f;
+	currTile->Global = heuristic(start, end);
 
 	std::cout << "Setting Current Tile + Global Goal" << std::endl;
 
-	std::list<Tile*> uTiles;
 	uTiles.push_back(start);
 
 	std::cout << "Created Node List" << std::endl;
 
-	while (!uTiles.empty())
+	while (!uTiles.empty() && currTile != end)
 	{
 		uTiles.sort([](const Tile* lhs, const Tile* rhs) {return lhs->Global < rhs->Global; });
 
@@ -186,43 +182,31 @@ bool Engine::aStar()
 			uTiles.pop_front();
 		}
 
+		
+		currTile = uTiles.front();
+		currTile->Visited = true;
+		
+
 		if (uTiles.empty())
 		{
 			std::cout << "Job done!" << std::endl;
 			break;
 		}
 
-		currTile = uTiles.front();
-		currTile->Visited = true;
-
-		if (currTile != nullptr && currTile->neighbours.size() > 0)
+		for (auto tNeighbour : currTile->neighbours)
 		{
-			for (auto tNeighbour : currTile->neighbours)
+			if (!tNeighbour->Visited && tNeighbour->isSolid == 0)
 			{
-				if (!tNeighbour->Visited && tNeighbour->isSolid == 0)
-				{
-					uTiles.push_back(tNeighbour);
-				}
-
-				float pLowerGoal = currTile->Local + distance(currTile, tNeighbour);
-
-				if (pLowerGoal < tNeighbour->Local)
-				{
-					tNeighbour->parent = currTile;
-					tNeighbour->Local = pLowerGoal;
-
-					tNeighbour->Global = tNeighbour->Local + heuristic(tNeighbour, end);
-				}
+				uTiles.push_back(tNeighbour);
+			}
+			float pLowerGoal = currTile->Local + distance(currTile, tNeighbour);
+			if (pLowerGoal < tNeighbour->Local)
+			{
+				tNeighbour->parent = currTile;
+				tNeighbour->Local = pLowerGoal;
+				tNeighbour->Global = tNeighbour->Local + heuristic(tNeighbour, end);
 			}
 		}
-		
-		
-		
-	}
-
-	for (int x = 0; x < mWidth * mHeight; x++)
-	{
-		std::cout << map[x].isPath << std::endl;
 	}
 	return true;
 }
